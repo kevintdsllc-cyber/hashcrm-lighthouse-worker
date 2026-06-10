@@ -189,7 +189,56 @@ async function runLighthouse(url, strategy, categories) {
     await chrome.kill();
   }
 }
+function toCrmPagespeedDevice(result) {
+  const issues = [
+    ...(result.opportunities || []).map((item) => item.title),
+    ...(result.diagnostics || [])
+      .filter((item) => item.score !== 1)
+      .map((item) => item.title)
+  ]
+    .filter(Boolean)
+    .slice(0, 8);
 
+  const suggestedImprovements = [];
+
+  if ((result.scores?.performance ?? 100) < 50) {
+    suggestedImprovements.push('Strong speed optimization opportunity');
+  }
+
+  if ((result.scores?.seo ?? 100) < 70) {
+    suggestedImprovements.push('SEO/website structure opportunity');
+  }
+
+  if ((result.scores?.accessibility ?? 100) < 70) {
+    suggestedImprovements.push('Accessibility and usability improvement opportunity');
+  }
+
+  if ((result.scores?.bestPractices ?? 100) < 70) {
+    suggestedImprovements.push('Technical cleanup opportunity');
+  }
+
+  if (!suggestedImprovements.length && issues.length) {
+    suggestedImprovements.push('Review the listed Lighthouse issues and optimize the highest-impact items first.');
+  }
+
+  return {
+    strategy: result.strategy,
+    performance: result.scores?.performance ?? null,
+    accessibility: result.scores?.accessibility ?? null,
+    bestPractices: result.scores?.bestPractices ?? null,
+    seo: result.scores?.seo ?? null,
+    firstContentfulPaint: result.metrics?.firstContentfulPaint?.displayValue || '',
+    largestContentfulPaint: result.metrics?.largestContentfulPaint?.displayValue || '',
+    speedIndex: result.metrics?.speedIndex?.displayValue || '',
+    totalBlockingTime: result.metrics?.totalBlockingTime?.displayValue || '',
+    cumulativeLayoutShift: result.metrics?.cumulativeLayoutShift?.displayValue || '',
+    mainIssues: issues,
+    suggestedImprovements,
+    finalUrl: result.finalUrl,
+    lighthouseVersion: result.lighthouseVersion,
+    fetchTime: result.fetchTime
+  };
+}
 async function main() {
   const { data: job, error } = await supabase
     .from('lighthouse_jobs')
