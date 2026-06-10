@@ -1,0 +1,14 @@
+{
+  "name": "hashcrm-github-lighthouse-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "run-job": "node run-lighthouse-job.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "chrome-launcher": "^1.1.2",
+    "lighthouse": "^12.6.1"
+  }
+}
