@@ -32,6 +32,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Check required environment variables
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          JOB_ID: ${{ github.event.inputs.job_id }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then echo "Missing SUPABASE_URL repo secret"; exit 1; fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then echo "Missing SUPABASE_SERVICE_ROLE_KEY repo secret"; exit 1; fi
+          if [ -z "$JOB_ID" ]; then echo "Missing workflow input job_id"; exit 1; fi
+          echo "Required values are present."
+
       - name: Run Lighthouse job
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
