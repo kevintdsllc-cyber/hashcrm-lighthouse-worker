@@ -282,21 +282,53 @@ async function main() {
     pagespeed[strategy] = await runLighthouse(url, strategy, categories);
   }
 
-  const result = {
-    leadId: job.lead_id,
-    url,
-    pagespeed,
-    summary: {
-      mobilePerformance: pagespeed.mobile?.scores?.performance ?? null,
-      desktopPerformance: pagespeed.desktop?.scores?.performance ?? null,
-      mobileSeo: pagespeed.mobile?.scores?.seo ?? null,
-      desktopSeo: pagespeed.desktop?.scores?.seo ?? null,
-      mobileAccessibility: pagespeed.mobile?.scores?.accessibility ?? null,
-      desktopAccessibility: pagespeed.desktop?.scores?.accessibility ?? null,
-      mobileBestPractices: pagespeed.mobile?.scores?.bestPractices ?? null,
-      desktopBestPractices: pagespeed.desktop?.scores?.bestPractices ?? null
+  const crmPagespeed = {};
+
+for (const [strategy, strategyResult] of Object.entries(pagespeed)) {
+  crmPagespeed[strategy] = toCrmPagespeedDevice(strategyResult);
+}
+
+crmPagespeed.auditedAt = new Date().toISOString();
+
+const result = {
+  type: job.job_type || 'pagespeed-audit',
+  leadId: job.lead_id,
+  url,
+  pagespeed: crmPagespeed,
+  rawPagespeed: pagespeed,
+  leadResults: [
+    {
+      leadId: job.lead_id,
+      ok: true,
+      pagespeed: crmPagespeed
     }
-  };
+  ],
+  summary: {
+    mobilePerformance: crmPagespeed.mobile?.performance ?? null,
+    desktopPerformance: crmPagespeed.desktop?.performance ?? null,
+    mobileSeo: crmPagespeed.mobile?.seo ?? null,
+    desktopSeo: crmPagespeed.desktop?.seo ?? null,
+    mobileAccessibility: crmPagespeed.mobile?.accessibility ?? null,
+    desktopAccessibility: crmPagespeed.desktop?.accessibility ?? null,
+    mobileBestPractices: crmPagespeed.mobile?.bestPractices ?? null,
+    desktopBestPractices: crmPagespeed.desktop?.bestPractices ?? null
+  }
+};
+
+if (job.lead_id) {
+  const { error: leadUpdateError } = await supabase
+    .from('leads')
+    .update({
+      pagespeed: crmPagespeed,
+      status: 'Speed Audited',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', job.lead_id);
+
+  if (leadUpdateError) {
+    console.warn('Lead pagespeed update failed:', leadUpdateError.message);
+  }
+}
 
   await updateJob({
     status: 'completed',
